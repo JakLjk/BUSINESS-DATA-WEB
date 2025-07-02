@@ -8,71 +8,16 @@
         </tr>
     </thead>
     <tbody>
+        <button id="download-selected-btn">Download Selected</button>
         {% for row in table %}
         <tr data-hash-id={{row.document_hash_id}}>
             <td>{{ row.document_type }}</td>
             <td>{{ row.document_name }}</td>
             <td>{{ row.document_from }}</td>
             <td>{{ row.document_to }}</td>
-            <td id="status-{{row.document_hash_id}}">UNKNOWN</td>
+            <td id="status-{{row.document_hash_id}}">In central KRS repository</td>
+            <td><input type="checkbox" class="download-checkbox"></td>
         </tr>
         {% endfor %}
     </tbody>
 </table>>
-<script>
-    async function fetchStatuses(hashIds) {
-        try {
-            const response = await fetch("/documents-scraping-status",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(hashIds)
-                }
-            );
-            const result = await response.json();
-            console.debug(result)
-            return result
-            
-        }
-        catch (err) {
-            console.error("Error fetching statuses: ", error);
-            return {};
-        }
-    }
-
-    async function updateTableStatuses(statuses) {
-        for (const [hashId, status] of Object.entries(statuses)) {
-            const statusCell = getElementById(`status-${hashId}`);
-            if (statusCell) {
-                statusCell.innerText = status;
-            }
-        }
-    }
-
-    async function pollStatuses() {
-        const unfinishedHashIds = [];
-        document.querySelectorAll("tr[data-hash-id]")
-            .forEach(row => {
-                const hashId = row.getAttribute("data-hash-id");
-                const statusCell = document.getElementById(`status-${hashId}`);
-                if (statusCell && statusCell.innerText !== "finished") {
-                    unfinishedHashIds.push(hashId);
-                }
-            });
-
-            if (unfinishedHashIds.length === 0) {
-                clearInterval(pollingInterval);
-                return;
-            }        
-        const statuses = await fetchStatuses(unfinishedHashIds);
-        updateTableStatuses(statuses)
-    }
-
-    const pollingInterval = setInterval(pollStatuses, 3000);
-
-
-
-pollStatuses();
-</script>
