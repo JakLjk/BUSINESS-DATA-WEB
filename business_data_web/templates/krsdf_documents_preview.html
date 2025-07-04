@@ -6,8 +6,25 @@
 <body data-job-id="{{ job_id }}" data-krs-number="{{ krs_number }}">
     <h2>Documents for krs: {{krs_number}} </h2>
     <div id="status-message">Loading data...</div>
+    <div id="download-ready-popup" style="display:none; position: fixed; bottom: 20px; right: 20px; background: #eee; border: 1px solid #ccc; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1000;">
+        <span>Documents are ready for download</span>
+        <button id="download-now-btn">Download</button>
+        <button id="download-close-btn">Close</button>
+    </div>
     <div id="document-container"></div>
 
+    <form 
+    id="download-form", 
+    method="POST",
+    action="/document-download",
+    target="_blank",
+    style="display:none;">
+        <input 
+        type="hidden", 
+        name="hash_ids", 
+        id="download-form-hash-ids">
+    
+    </form>
     <script src="{{ url_for('static', filename='js/documents.js') }}"></script>
     <script src="{{ url_for('static', filename='js/documents_table.js') }}"></script>
 </body>

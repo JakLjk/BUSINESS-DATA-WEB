@@ -1,7 +1,8 @@
 import os
+import json
 import requests
 from dotenv import load_dotenv
-from flask import Blueprint, render_template, request
+from flask import Response, Blueprint, render_template, request, stream_with_context
 
 load_dotenv()
 
@@ -20,7 +21,7 @@ url_get_krsd_df_docs__scraping_statuses = (
         os.getenv("API_ROUTE_KRSDF")
         +
         os.getenv("API_KRSDF_DOCUMENTS_SCRAPING_STATUS")
-)
+    )
 
 url_get_krsd_df_docs__scrape_documents = (
         os.getenv("API_BASE_URL")
@@ -28,15 +29,15 @@ url_get_krsd_df_docs__scrape_documents = (
         os.getenv("API_ROUTE_KRSDF")
         +
         os.getenv("API_KRSDF_SCRAPE_DOCUMENTS")
-)
+    )
 
-url_get_krsd_df_docs__download_documents = (
+url_get_krsd_df_docs_download_documents = (
         os.getenv("API_BASE_URL")
         +
         os.getenv("API_ROUTE_KRSDF")
         +
-        os.getenv("API_KRSDF_SCRAPE_DOCUMENTS")
-)
+        os.getenv("API_KRSDF_DOWNLOAD_DOCUMENTS")
+    )
 
 @root_bp.route('/')
 def index():
@@ -97,6 +98,8 @@ def documents_list_table(job_id):
 @root_bp.route("/documents-scraping-status", methods=["POST"])
 def documents_scraping_status():
     hash_ids = request.get_json()
+    # print("--------------")
+    # print(hash_ids)
     if not isinstance(hash_ids, list):
         return {"error":"expected list of hash ids"}, 400
     try:
@@ -110,23 +113,10 @@ def documents_scraping_status():
         raise e
     if not data["status"] == "finished":
         raise Exception("Invalid data format")
-    print(data["data"])
+    # print(data["data"])
     return data["data"]
 
-@root_bp.route("/document-download", methods=["POST"])
-def document_download():
-    hash_ids = request.get_json()
-    if not isinstance(hash_ids, list):
-        return {"error":"expected list of hash ids"}, 400
-    try:
-        response = requests.post(
-            url_get_krsd_df_docs__scrape_documents,
-            json=hash_ids
-        )
-        response.raise_for_status()
-        data = response.json()
-    except requests.RequestException as e:
-        raise e
+
     
 @root_bp.route("/document-scrape", methods=["POST"])
 def document_scrape():
@@ -145,6 +135,36 @@ def document_scrape():
     except requests.RequestException as e:
         raise e
     return {"message":"Scraping task added to queue"}, 200
+
+
+@root_bp.route("/document-download", methods=["POST"])
+def document_download():
+    hash_ids_raw = request.form.get("hash_ids")
+    hash_ids = json.loads(hash_ids_raw)
+    # print("xxxxxxxxxxxxxx")
+    # print(hash_ids)
+    if not isinstance(hash_ids, list):
+        print("XXX")
+        return {"error":"expected list of hash ids"}, 400
+    try:
+        response = requests.post(
+            url_get_krsd_df_docs_download_documents,
+            json=hash_ids,
+            stream=True
+        )
+        response.raise_for_status()
+        return Response(
+            stream_with_context(response.iter_content(chunk_size=8192)),
+            content_type="application/zip",
+            headers={
+                "Content-Disposition":"attachment; filename=documents.zip"
+            }
+        )
+
+    except requests.RequestException as e:
+        raise e
+
+
 
 # TODO downlaod button should actually send a download request to krs df
 # After all selected documents have finished downloading, popup should appear
